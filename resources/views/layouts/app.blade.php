@@ -30,6 +30,9 @@
                 @can('viewAny', App\Models\User::class)
                     <a href="{{ route('usuarios.index') }}" class="rounded-lg px-4 py-2 text-sm font-semibold {{ request()->routeIs('usuarios.*') ? 'bg-sky-100 text-sky-800' : 'text-slate-600 hover:bg-slate-100' }}">Usuarios</a>
                 @endcan
+                @can('viewAny', App\Models\Documento::class)
+                    <a href="{{ route('configuracion.documentos.index') }}" class="rounded-lg px-4 py-2 text-sm font-semibold {{ request()->routeIs('configuracion.*') ? 'bg-sky-100 text-sky-800' : 'text-slate-600 hover:bg-slate-100' }}">Configuración</a>
+                @endcan
             </div>
         </nav>
     @endauth

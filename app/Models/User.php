@@ -53,6 +53,11 @@ class User extends Authenticatable
         return $this->rol?->slug === $rol;
     }
 
+    public function puedeConfigurarRecinto(): bool
+    {
+        return in_array($this->rol?->slug, ['root', 'secretaria'], true);
+    }
+
     protected function casts(): array
     {
         return ['email_verificado_en' => 'datetime', 'ultimo_acceso_en' => 'datetime', 'contrasena' => 'hashed', 'activo' => 'boolean'];

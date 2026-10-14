@@ -1,0 +1,19 @@
+<x-layouts.app title="Documentos — Configuración">
+    <div class="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+        <div><p class="text-sm font-bold uppercase tracking-widest text-sky-700">Configuración</p><h1 class="mt-2 text-3xl font-black">Documentos de sesión</h1><p class="mt-1 text-slate-500">Carga privada y disponibilidad por sesión parlamentaria.</p></div>
+        <div class="flex flex-wrap gap-2"><a href="{{ route('configuracion.sesiones.index') }}" class="rounded-xl border border-slate-300 bg-white px-5 py-3 font-bold">Sesiones</a><a href="{{ route('configuracion.documentos.create') }}" class="rounded-xl bg-sky-600 px-5 py-3 font-bold text-white">Cargar PDF</a></div>
+    </div>
+
+    <section class="mb-6 rounded-2xl bg-slate-900 p-5 text-white">
+        <form method="GET" class="flex flex-col gap-3 sm:flex-row sm:items-end"><div class="flex-1"><label for="sesion_id" class="mb-2 block text-sm font-bold text-slate-300">Configurar documentos para</label><select id="sesion_id" name="sesion_id" class="w-full rounded-xl border-slate-600 bg-slate-800 px-4 py-3" onchange="this.form.submit()"><option value="">Seleccione una sesión</option>@foreach($sesiones as $sesion)<option value="{{ $sesion->id }}" @selected($sesionSeleccionada?->is($sesion))>{{ $sesion->nombre }}{{ $sesion->numero ? ' · '.$sesion->numero : '' }}</option>@endforeach</select></div><noscript><button class="rounded-xl bg-sky-600 px-5 py-3 font-bold">Aplicar</button></noscript></form>
+        @if($sesiones->isEmpty())<p class="mt-3 text-sm text-amber-300">Primero debe crear una sesión parlamentaria.</p>@endif
+    </section>
+
+    <div class="grid gap-4">
+        @forelse($documentos as $documento)
+            @php($asignacion = $documentosSesion->get($documento->id))
+            <article class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200"><div class="flex flex-col justify-between gap-5 lg:flex-row lg:items-center"><div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><h2 class="truncate text-lg font-bold">{{ $documento->titulo }}</h2><span class="rounded-full px-3 py-1 text-xs font-bold {{ $documento->activo ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600' }}">{{ $documento->activo ? 'Disponible' : 'Archivado' }}</span>@if($asignacion?->pivot->activo)<span class="rounded-full bg-sky-100 px-3 py-1 text-xs font-bold text-sky-700">Activo en sesión</span>@endif</div><p class="mt-1 truncate text-sm text-slate-500">{{ $documento->nombre_archivo }} · {{ number_format($documento->tamano_bytes / 1024, 0, ',', '.') }} KB · {{ strtoupper($documento->origen) }}</p></div><div class="flex flex-wrap gap-2"><a target="_blank" href="{{ route('configuracion.documentos.preview', $documento) }}" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-bold">Vista previa</a>@if($sesionSeleccionada && $documento->activo)<form method="POST" action="{{ route('configuracion.sesiones.documentos.update', [$sesionSeleccionada, $documento]) }}">@csrf @method('PUT')<input type="hidden" name="activo" value="{{ $asignacion?->pivot->activo ? 0 : 1 }}"><button class="rounded-lg px-4 py-2 text-sm font-bold {{ $asignacion?->pivot->activo ? 'bg-amber-100 text-amber-800' : 'bg-sky-600 text-white' }}">{{ $asignacion?->pivot->activo ? 'Desactivar en sesión' : 'Activar en sesión' }}</button></form>@endif<form method="POST" action="{{ route('configuracion.documentos.estado', $documento) }}">@csrf @method('PATCH')<button class="rounded-lg bg-slate-100 px-4 py-2 text-sm font-bold text-slate-700">{{ $documento->activo ? 'Archivar' : 'Habilitar' }}</button></form></div></div></article>
+        @empty<div class="rounded-2xl border-2 border-dashed border-slate-300 p-12 text-center text-slate-500">Todavía no hay documentos cargados.</div>@endforelse
+    </div>
+    <div class="mt-6">{{ $documentos->links() }}</div>
+</x-layouts.app>

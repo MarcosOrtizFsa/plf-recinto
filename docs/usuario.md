@@ -1,4 +1,4 @@
-# Guía de usuario — Partes 1 y 2
+# Guía de usuario — Partes 1, 2 y 3
 
 Esta parte instala la base técnica y todavía no ofrece pantallas operativas ni acceso por roles.
 
@@ -15,3 +15,15 @@ Desde **Usuarios**, Root puede buscar, crear y editar cuentas. Al elegir el rol 
 La contraseña en edición es opcional: si queda vacía se conserva la actual. “Desactivar usuario” bloquea el acceso pero conserva su historial. Root no puede desactivar su propia cuenta.
 
 Los demás roles no tienen acceso al módulo Usuarios. Sus pantallas específicas se incorporarán en partes posteriores.
+
+## Configurar sesiones y PDFs
+
+Root y Secretaría verán **Configuración** en la navegación.
+
+1. Entre a **Configuración → Sesiones** y cree una sesión con nombre, número e inicio programado.
+2. Regrese a **Documentos de sesión** y use **Cargar PDF**.
+3. Indique un título y seleccione un archivo PDF de hasta 20 MB, salvo que el administrador haya cambiado el límite.
+4. Seleccione la sesión en el desplegable y pulse **Activar en sesión** para cada PDF que deba estar disponible.
+5. Use **Vista previa** para revisar el archivo sin hacerlo público.
+
+**Desactivar en sesión** sólo retira el documento de esa sesión. **Archivar** lo deshabilita globalmente y también en todas las sesiones, conservándolo para auditoría. Un documento archivado puede volver a habilitarse.

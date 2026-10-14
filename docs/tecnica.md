@@ -1,4 +1,4 @@
-# Documentación técnica — Partes 1 y 2
+# Documentación técnica — Partes 1, 2 y 3
 
 ## Arquitectura
 
@@ -48,3 +48,15 @@ El formulario de acceso limita a cinco intentos por combinación de correo e IP.
 `UserPolicy` reserva listar, crear, editar y desactivar usuarios al rol `root`. Root no puede desactivarse a sí mismo. La baja es lógica (`activo = false`) para no romper la trazabilidad de asistencias, votos y documentos.
 
 Las reglas de negocio se validan mediante Form Requests: correo único, contraseña confirmada de al menos ocho caracteres, banca única y obligatoria para Legisladores, y ausencia de banca para los demás roles. La escritura se delega a Actions para mantener controladores delgados.
+
+## Configuración de documentos — Parte 3
+
+Root y Secretaría pueden administrar sesiones parlamentarias en estado borrador y el catálogo de PDFs. `DocumentoPolicy` y `SesionParlamentariaPolicy` impiden el acceso a los demás roles.
+
+Los archivos se guardan en el disco privado `local` (`storage/app/private/documentos`) con un UUID físico, mientras se conserva el nombre original como metadato. No se crea enlace público. La vista previa pasa por un controlador autenticado y autorizado, responde en modo `inline` y agrega `X-Content-Type-Options: nosniff`.
+
+`StoreDocumentoRequest` comprueba extensión, MIME detectado en el servidor y tamaño máximo configurable mediante `DOCUMENTOS_MAX_KB` (20 MB por defecto). También se registra tamaño y SHA-256. Si la escritura de metadatos falla, la Action elimina el archivo para evitar huérfanos.
+
+`AlmacenamientoDocumentos` desacopla el dominio del disco físico; actualmente se enlaza con `AlmacenamientoPrivadoDocumentos`. Un proveedor S3 puede reemplazarlo sin modificar controladores ni Actions. La futura importación documental puede crear registros con `origen = api` y `referencia_externa`, reutilizando este contrato.
+
+La relación `documentos_sesion` controla disponibilidad y orden por sesión. Archivar globalmente un documento lo desactiva en todas sus sesiones, pero conserva archivo y metadatos para trazabilidad.
