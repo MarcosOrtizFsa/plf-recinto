@@ -1,4 +1,4 @@
-# Documentación técnica — Partes 1, 2 y 3
+# Documentación técnica — Partes 1 a 4
 
 ## Arquitectura
 
@@ -60,3 +60,38 @@ Los archivos se guardan en el disco privado `local` (`storage/app/private/docume
 `AlmacenamientoDocumentos` desacopla el dominio del disco físico; actualmente se enlaza con `AlmacenamientoPrivadoDocumentos`. Un proveedor S3 puede reemplazarlo sin modificar controladores ni Actions. La futura importación documental puede crear registros con `origen = api` y `referencia_externa`, reutilizando este contrato.
 
 La relación `documentos_sesion` controla disponibilidad y orden por sesión. Archivar globalmente un documento lo desactiva en todas sus sesiones, pero conserva archivo y metadatos para trazabilidad.
+
+## Sistema en vivo — Parte 4
+
+`GestorRecinto` concentra las mutaciones transaccionales de sesión, asistencia, bancas, documento mostrado, votaciones y votos. Cada cambio incrementa `estado_recinto.version`. Después del commit se emite `EstadoRecintoActualizado`; el evento sólo contiene versión y motivo. Los clientes siempre consultan nuevamente MySQL mediante sus endpoints de estado.
+
+Reverb publica avisos en el canal privado `recinto`, autorizado para roles operativos activos, y en `monitor-publico`, que no contiene datos privados. Si Reverb no está disponible, la transacción permanece confirmada: WebSocket no es la fuente de verdad.
+
+### Votación
+
+Comando configura tema, método y duración. Al iniciar, se fija una única ventana global. En voto directo cada legislador presente con banca activa puede emitir o reemplazar su voto hasta el cierre. En voto asistido Secretaría registra el voto con la misma semántica de reemplazo. La votación se cierra cuando votaron todos los habilitados, cuando Comando decide cerrarla o al vencer el tiempo.
+
+`php artisan schedule:work` ejecuta `votaciones:cerrar-vencidas` cada segundo. Además, las consultas de estado cierran vencimientos pendientes, por lo que una interrupción breve del scheduler no deja las pantallas desactualizadas. Al cerrar se publica el resultado agregado en el monitor.
+
+### Sesión web prolongada
+
+- `ConfigurarSesionRecinto` aplica `RECINTO_SESSION_LIFETIME` sólo a rutas Comando, bancas, monitor y latido mientras existe una sesión parlamentaria `en_curso` y la IP está permitida.
+- El valor recomendado es 1560 minutos (26 horas), para tolerar una caída de red durante una sesión de 24 horas. Fuera de la sesión se restaura `SESSION_LIFETIME`.
+- El navegador llama a `/latido` cada `RECINTO_HEARTBEAT_SECONDS` únicamente mientras la sesión está activa. El endpoint actualiza la sesión y regenera CSRF.
+- Axios reintenta una vez las respuestas 419/401 después de renovar. Si no puede recuperarse, muestra un aviso de reautenticación sin reemplazar el contenido visible.
+- El token “recordarme” nativo permite recuperar autenticación en el siguiente request cuando la sesión desapareció.
+- Echo escucha reconexiones y eventos, y dispara una resincronización completa desde MySQL.
+
+En producción se deben definir `RECINTO_ALLOWED_IPS`, HTTPS/WSS y cookies `secure`, usar dispositivos administrados con bloqueo de pantalla, revocar inmediatamente usuarios/dispositivos extraviados y evitar “recordarme” fuera del recinto. El monitor no expone votos individuales. El heartbeat se detiene al finalizar la sesión parlamentaria.
+
+### Procesos requeridos
+
+Además del servidor web y Vite en desarrollo, deben mantenerse activos:
+
+```powershell
+php artisan reverb:start
+php artisan schedule:work
+php artisan queue:work
+```
+
+El orden de oratoria sigue fuera de alcance. Podrá acoplarse como agregado de `sesiones_parlamentarias`, utilizando el mismo patrón de persistencia, versión, evento mínimo y resincronización.

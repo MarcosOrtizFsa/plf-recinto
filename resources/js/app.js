@@ -1,4 +1,5 @@
 import './bootstrap';
+import './recinto';
 
 import Alpine from 'alpinejs';
 
