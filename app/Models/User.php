@@ -55,6 +55,6 @@ class User extends Authenticatable
 
     protected function casts(): array
     {
-        return ['email_verificado_en' => 'datetime', 'contrasena' => 'hashed', 'activo' => 'boolean'];
+        return ['email_verificado_en' => 'datetime', 'ultimo_acceso_en' => 'datetime', 'contrasena' => 'hashed', 'activo' => 'boolean'];
     }
 }

@@ -1,4 +1,4 @@
-# Documentación técnica — Parte 1
+# Documentación técnica — Partes 1 y 2
 
 ## Arquitectura
 
@@ -38,3 +38,13 @@ Reverb quedó configurado, pero los eventos y canales privados corresponden a la
 ## Extensiones futuras
 
 La fuente API de documentos encajará detrás de un servicio de importación y utilizará `origen` y `referencia_externa` sin cambiar consumidores. El orden de oratoria podrá agregarse como módulo relacionado con `sesiones_parlamentarias`, publicando cambios con el mismo patrón de estado persistido más aviso WebSocket; queda expresamente fuera del esquema actual.
+
+## Autenticación y autorización — Parte 2
+
+La autenticación usa el guard `web` nativo de Laravel y la tabla `usuarios`. El modelo adapta `contrasena` y `token_recordarme` a los contratos de Laravel, por lo que el hash y el mecanismo “recordarme” funcionan sin paquetes externos. No existe ninguna ruta de registro público.
+
+El formulario de acceso limita a cinco intentos por combinación de correo e IP. Sólo usuarios activos pueden autenticarse; un middleware también expulsa de forma segura a una sesión cuyo usuario haya sido desactivado. Cada acceso correcto registra `ultimo_acceso_en`.
+
+`UserPolicy` reserva listar, crear, editar y desactivar usuarios al rol `root`. Root no puede desactivarse a sí mismo. La baja es lógica (`activo = false`) para no romper la trazabilidad de asistencias, votos y documentos.
+
+Las reglas de negocio se validan mediante Form Requests: correo único, contraseña confirmada de al menos ocho caracteres, banca única y obligatoria para Legisladores, y ausencia de banca para los demás roles. La escritura se delega a Actions para mantener controladores delgados.
