@@ -5,6 +5,11 @@ function actualizarCsrf(token) {
     const meta = document.querySelector('meta[name="csrf-token"]');
     if (meta && token) meta.content = token;
     if (token) window.axios.defaults.headers.common['X-CSRF-TOKEN'] = token;
+    if (token) {
+        document.querySelectorAll('input[name="_token"]').forEach((input) => {
+            input.value = token;
+        });
+    }
 }
 
 async function latido() {

@@ -47,3 +47,7 @@ Cuando se abre una votación directa aparecen tres botones táctiles: **AFIRMATI
 ## Monitor público
 
 Abra `/monitor` en la pantalla pública. No requiere login y sólo muestra la información publicada: asistencia, votación en curso y resultado final agregado. No muestra votos individuales.
+
+## Datos de simulacro
+
+En desarrollo puede cargarse el escenario ficticio con `php artisan db:seed --class=SimulacroRecintoSeeder`. Crea 30 legisladores, uno por banca, correos desde `banca01@recinto.test` hasta `banca30@recinto.test`, y la sesión borrador **Sesión de Simulacro del Recinto**. Todos usan la contraseña definida localmente en `DEMO_CONTRASENA`.

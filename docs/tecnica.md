@@ -95,3 +95,7 @@ php artisan queue:work
 ```
 
 El orden de oratoria sigue fuera de alcance. Podrá acoplarse como agregado de `sesiones_parlamentarias`, utilizando el mismo patrón de persistencia, versión, evento mínimo y resincronización.
+
+## Escenario de simulacro
+
+`SimulacroRecintoSeeder` es deliberadamente independiente de `DatabaseSeeder`: nunca introduce usuarios ficticios en una instalación normal. Requiere `DEMO_CONTRASENA`, crea o actualiza 30 cuentas `@recinto.test`, las vincula uno a uno con las bancas y crea una sesión en borrador. Se niega a reemplazar al ocupante no-demo de una banca.

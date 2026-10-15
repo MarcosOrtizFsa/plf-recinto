@@ -58,13 +58,14 @@ class ConsultaEstadoRecinto
         if (! $estado) {
             return ['activa' => false, 'version' => 0, 'legislador' => $usuario->nombre, 'banca' => $banca->numero];
         }
-        $presente = $estado->sesionParlamentaria->asistencias()->where('usuario_id', $usuario->id)->where('estado', 'presente')->exists();
+        $asistencia = $estado->sesionParlamentaria->asistencias()->where('usuario_id', $usuario->id)->value('estado') ?? 'ausente';
+        $presente = $asistencia === 'presente';
         $votacion = $estado->votacionActiva;
         $voto = $votacion?->votos()->where('usuario_id', $usuario->id)->value('opcion');
 
         return [
             'activa' => true, 'version' => $estado->version, 'legislador' => $usuario->nombre, 'banca' => $banca->numero,
-            'habilitada' => $presente && $banca->activa, 'motivo_anulacion' => $banca->motivo_anulacion,
+            'habilitada' => $presente && $banca->activa, 'asistencia' => $asistencia, 'motivo_anulacion' => $banca->motivo_anulacion,
             'documento' => $estado->documentoMostrado ? ['titulo' => $estado->documentoMostrado->titulo, 'url' => route('bancas.documento', [$banca, $estado->documentoMostrado])] : null,
             'votacion' => $votacion && $votacion->metodo === 'directo' ? [...$this->datosVotacion($votacion, false), 'voto' => $voto] : null,
         ];

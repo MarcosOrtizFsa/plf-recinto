@@ -33,7 +33,7 @@ class RecintoEnVivoTest extends TestCase
         $this->sesion = SesionParlamentaria::factory()->create(['estado' => 'borrador']);
     }
 
-    public function test_el_heartbeat_mantiene_la_sesion_y_renueva_csrf_mientras_hay_sesion_parlamentaria(): void
+    public function test_el_heartbeat_mantiene_la_sesion_y_conserva_un_csrf_valido_mientras_hay_sesion_parlamentaria(): void
     {
         app(GestorRecinto::class)->activarSesion($this->sesion);
         $tokenAnterior = 'token-anterior';
@@ -42,7 +42,7 @@ class RecintoEnVivoTest extends TestCase
 
         $respuesta->assertOk()->assertJson(['activa' => true]);
         $this->assertAuthenticatedAs($this->secretaria);
-        $this->assertNotSame($tokenAnterior, $respuesta->json('csrf_token'));
+        $this->assertSame($tokenAnterior, $respuesta->json('csrf_token'));
         $respuesta->assertSessionHas('ultimo_latido_recinto');
         $this->assertSame(1560, config('session.lifetime'));
 
@@ -69,7 +69,7 @@ class RecintoEnVivoTest extends TestCase
         $gestor->mostrarDocumento($this->sesion, $documento);
 
         $this->actingAs($legislador)->getJson(route('bancas.estado', $legislador->banca))->assertOk()
-            ->assertJsonPath('habilitada', true)->assertJsonPath('documento.titulo', $documento->titulo);
+            ->assertJsonPath('habilitada', true)->assertJsonPath('asistencia', 'presente')->assertJsonPath('documento.titulo', $documento->titulo);
     }
 
     public function test_voto_directo_puede_corregirse_y_cierra_cuando_votan_todos_los_presentes(): void
