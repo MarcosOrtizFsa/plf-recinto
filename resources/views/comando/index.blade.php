@@ -1,4 +1,6 @@
 <x-layouts.app title="Comando — Sistema del Recinto">
+    @include('comando.consola')
+    {{-- Vista anterior conservada temporalmente como referencia.
     <div x-data="{ estado: @js($estadoInicial), async cargar(){ const r = await axios.get('{{ route('comando.estado') }}'); this.estado = r.data } }" @recinto-resync.window="cargar()" class="space-y-7">
         <header class="flex flex-col justify-between gap-4 lg:flex-row lg:items-end"><div><p class="text-sm font-bold uppercase tracking-[.2em] text-sky-700">Secretaría</p><h1 class="mt-2 text-4xl font-black">Comando</h1><p class="mt-2 text-slate-500" x-text="estado.activa ? estado.sesion.nombre : 'Sin sesión activa'"></p></div><a target="_blank" href="{{ route('monitor.show') }}" class="rounded-xl border border-slate-300 bg-white px-5 py-3 text-center font-bold">Abrir monitor público</a></header>
 
@@ -16,4 +18,5 @@
             <form method="POST" action="{{ route('comando.sesiones.cerrar', $sesionActiva) }}" onsubmit="return confirm('¿Finalizar la sesión parlamentaria?')">@csrf<button class="rounded-xl bg-red-700 px-6 py-3 font-bold text-white">Finalizar sesión parlamentaria</button></form>
         @endunless
     </div>
+    --}}
 </x-layouts.app>

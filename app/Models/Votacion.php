@@ -32,6 +32,6 @@ class Votacion extends Model
 
     protected function casts(): array
     {
-        return ['iniciada_en' => 'datetime', 'finaliza_en' => 'datetime', 'cerrada_en' => 'datetime', 'resultado_publicado' => 'boolean'];
+        return ['cantidad_articulos' => 'integer', 'iniciada_en' => 'datetime', 'finaliza_en' => 'datetime', 'cerrada_en' => 'datetime', 'resultado_publicado' => 'boolean'];
     }
 }

@@ -6,6 +6,7 @@ use App\Http\Controllers\ComandoController;
 use App\Http\Controllers\Configuracion\DocumentoController;
 use App\Http\Controllers\Configuracion\DocumentoSesionController;
 use App\Http\Controllers\Configuracion\SesionParlamentariaController;
+use App\Http\Controllers\Configuracion\VotacionController as ConfiguracionVotacionController;
 use App\Http\Controllers\LatidoController;
 use App\Http\Controllers\MonitorPublicoController;
 use App\Http\Controllers\UsuarioController;
@@ -36,6 +37,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/documentos/{documento}/preview', [DocumentoController::class, 'preview'])->name('documentos.preview');
         Route::patch('/documentos/{documento}/estado', [DocumentoController::class, 'cambiarEstado'])->name('documentos.estado');
         Route::put('/sesiones/{sesion}/documentos/{documento}', [DocumentoSesionController::class, 'update'])->name('sesiones.documentos.update');
+        Route::post('/sesiones/{sesion}/finalizar', [SesionParlamentariaController::class, 'finalizar'])->name('sesiones.finalizar');
+        Route::post('/sesiones/{sesion}/reactivar', [SesionParlamentariaController::class, 'reactivar'])->name('sesiones.reactivar');
+        Route::post('/sesiones/{sesion}/votaciones', [ConfiguracionVotacionController::class, 'store'])->name('sesiones.votaciones.store');
+        Route::delete('/sesiones/{sesion}/votaciones/{votacion}', [ConfiguracionVotacionController::class, 'destroy'])->name('sesiones.votaciones.destroy');
         Route::resource('sesiones', SesionParlamentariaController::class)->only(['index', 'create', 'store', 'edit', 'update'])->parameters(['sesiones' => 'sesion']);
     });
 
@@ -43,13 +48,19 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [ComandoController::class, 'index'])->name('index');
         Route::get('/estado', [ComandoController::class, 'estado'])->name('estado');
         Route::post('/sesiones/{sesion}/activar', [ComandoController::class, 'activarSesion'])->name('sesiones.activar');
-        Route::post('/sesiones/{sesion}/cerrar', [ComandoController::class, 'cerrarSesion'])->name('sesiones.cerrar');
+        Route::post('/sesiones/{sesion}/suspender', [ComandoController::class, 'suspenderSesion'])->name('sesiones.suspender');
+        Route::post('/sesiones/{sesion}/reanudar', [ComandoController::class, 'reanudarSesion'])->name('sesiones.reanudar');
         Route::put('/sesiones/{sesion}/asistencia', [ComandoController::class, 'asistencia'])->name('asistencia');
+        Route::put('/sesiones/{sesion}/asistencia/reset', [ComandoController::class, 'reiniciarAsistencia'])->name('asistencia.reset');
         Route::put('/sesiones/{sesion}/bancas/{banca}', [ComandoController::class, 'banca'])->name('bancas.update');
         Route::put('/sesiones/{sesion}/documentos/{documento}', [ComandoController::class, 'documento'])->name('documentos.mostrar');
         Route::post('/votaciones', [ComandoController::class, 'crearVotacion'])->name('votaciones.store');
         Route::post('/votaciones/{votacion}/iniciar', [ComandoController::class, 'iniciarVotacion'])->name('votaciones.iniciar');
         Route::post('/votaciones/{votacion}/cerrar', [ComandoController::class, 'cerrarVotacion'])->name('votaciones.cerrar');
+        Route::put('/votaciones/{votacion}/reiniciar', [ComandoController::class, 'reiniciarVotacion'])->name('votaciones.reiniciar');
+        Route::post('/votaciones/{votacion}/visibilidad', [ComandoController::class, 'visibilidadVotacion'])->name('votaciones.visibilidad');
+        Route::post('/votaciones/{votacion}/publicar', [ComandoController::class, 'publicarResultado'])->name('votaciones.publicar');
+        Route::post('/votaciones/{votacion}/despublicar', [ComandoController::class, 'despublicarResultado'])->name('votaciones.despublicar');
         Route::put('/votaciones/{votacion}/voto', [ComandoController::class, 'votoAsistido'])->name('votaciones.voto');
     });
 

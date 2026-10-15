@@ -31,10 +31,30 @@ class GestorRecinto
             ));
             $estado = EstadoRecinto::query()->updateOrCreate(
                 ['sesion_parlamentaria_id' => $sesion->id],
-                ['vista_monitor' => 'asistencia', 'documento_mostrado_id' => null, 'votacion_activa_id' => null],
+                ['vista_monitor' => 'asistencia', 'documento_mostrado_id' => null, 'votacion_activa_id' => null, 'configuracion' => ['suspendida' => false]],
             );
 
             return $this->tocar($estado, 'sesion.iniciada');
+        });
+    }
+
+    public function suspenderSesion(SesionParlamentaria $sesion): void
+    {
+        DB::transaction(function () use ($sesion) {
+            throw_unless($sesion->estado === 'en_curso', ValidationException::withMessages(['sesion' => 'Sólo puede suspenderse una sesión en curso.']));
+            $estado = $this->estadoDe($sesion);
+            $estado->update(['configuracion' => [...($estado->configuracion ?? []), 'suspendida' => true]]);
+            $this->tocar($estado, 'sesion.suspendida');
+        });
+    }
+
+    public function reanudarSesion(SesionParlamentaria $sesion): void
+    {
+        DB::transaction(function () use ($sesion) {
+            throw_unless($sesion->estado === 'en_curso', ValidationException::withMessages(['sesion' => 'Sólo puede reanudarse una sesión en curso.']));
+            $estado = $this->estadoDe($sesion);
+            $estado->update(['configuracion' => [...($estado->configuracion ?? []), 'suspendida' => false]]);
+            $this->tocar($estado, 'sesion.reanudada');
         });
     }
 
@@ -56,11 +76,28 @@ class GestorRecinto
         throw_unless($legislador->tieneRol('legisladores') && $legislador->banca_id, ValidationException::withMessages(['usuario_id' => 'La asistencia sólo corresponde a legisladores con banca.']));
 
         DB::transaction(function () use ($sesion, $legislador, $estadoAsistencia, $operador) {
+            $sinMarcar = $estadoAsistencia === 'sin_marcar';
             Asistencia::query()->updateOrCreate(
                 ['sesion_parlamentaria_id' => $sesion->id, 'usuario_id' => $legislador->id],
-                ['estado' => $estadoAsistencia, 'registrada_en' => now(), 'registrada_por' => $operador->id],
+                [
+                    'estado' => $sinMarcar ? 'ausente' : $estadoAsistencia,
+                    'registrada_en' => $sinMarcar ? null : now(),
+                    'registrada_por' => $sinMarcar ? null : $operador->id,
+                ],
             );
             $this->tocar($this->estadoDe($sesion), 'asistencia.actualizada');
+        });
+    }
+
+    public function reiniciarAsistencia(SesionParlamentaria $sesion): void
+    {
+        DB::transaction(function () use ($sesion) {
+            $sesion->asistencias()->update([
+                'estado' => 'ausente',
+                'registrada_en' => null,
+                'registrada_por' => null,
+            ]);
+            $this->tocar($this->estadoDe($sesion), 'asistencia.reiniciada');
         });
     }
 
@@ -79,16 +116,34 @@ class GestorRecinto
         DB::transaction(fn () => $this->tocar(tap($this->estadoDe($sesion))->update(['documento_mostrado_id' => $documento->id, 'vista_monitor' => 'documento']), 'documento.mostrado'));
     }
 
-    public function iniciarVotacion(Votacion $votacion, int $duracion): void
+    public function iniciarVotacion(Votacion $votacion, int $duracion, string $metodo): void
     {
-        DB::transaction(function () use ($votacion, $duracion) {
+        DB::transaction(function () use ($votacion, $duracion, $metodo) {
             $estado = $this->estadoDe($votacion->sesionParlamentaria);
             if ($estado->votacion_activa_id) {
                 throw ValidationException::withMessages(['votacion' => 'Ya existe una votación activa.']);
             }
-            $votacion->update(['estado' => 'abierta', 'duracion_segundos' => $duracion, 'iniciada_en' => now(), 'finaliza_en' => now()->addSeconds($duracion), 'cerrada_en' => null, 'resultado_publicado' => false]);
-            $estado->update(['votacion_activa_id' => $votacion->id, 'vista_monitor' => 'votacion']);
+            $votacion->update(['metodo' => $metodo, 'estado' => 'abierta', 'duracion_segundos' => $duracion, 'iniciada_en' => now(), 'finaliza_en' => now()->addSeconds($duracion), 'cerrada_en' => null, 'resultado_publicado' => false]);
+            $estado->update([
+                'votacion_activa_id' => $votacion->id,
+                'vista_monitor' => 'asistencia',
+                'configuracion' => [...($estado->configuracion ?? []), 'votacion_en_vivo' => false],
+            ]);
             $this->tocar($estado, 'votacion.iniciada');
+        });
+    }
+
+    public function mostrarVotacionEnVivo(Votacion $votacion, bool $visible): void
+    {
+        DB::transaction(function () use ($votacion, $visible) {
+            throw_unless($votacion->estado === 'abierta', ValidationException::withMessages(['votacion' => 'Sólo puede mostrarse una votación abierta.']));
+            $estado = $this->estadoDe($votacion->sesionParlamentaria);
+            throw_unless($estado->votacion_activa_id === $votacion->id, ValidationException::withMessages(['votacion' => 'La votación no está activa.']));
+            $estado->update([
+                'vista_monitor' => $visible ? 'votacion' : 'asistencia',
+                'configuracion' => [...($estado->configuracion ?? []), 'votacion_en_vivo' => $visible],
+            ]);
+            $this->tocar($estado, $visible ? 'votacion.publicada_en_vivo' : 'votacion.ocultada');
         });
     }
 
@@ -108,16 +163,58 @@ class GestorRecinto
             );
             $estado = $this->estadoDe($votacion->sesionParlamentaria);
             $this->tocar($estado, 'voto.registrado');
-
-            if ($votacion->votos()->count() >= $this->cantidadHabilitados($votacion->sesionParlamentaria)) {
-                $this->cerrarVotacionInterna($votacion, $estado);
-            }
         });
     }
 
     public function cerrarVotacion(Votacion $votacion): void
     {
         DB::transaction(fn () => $this->cerrarVotacionInterna($votacion, $this->estadoDe($votacion->sesionParlamentaria)));
+    }
+
+    public function reiniciarVotacion(Votacion $votacion): void
+    {
+        DB::transaction(function () use ($votacion) {
+            $estado = $this->estadoDe($votacion->sesionParlamentaria);
+            $votacion->votos()->delete();
+            $votacion->update([
+                'estado' => 'configurada',
+                'iniciada_en' => null,
+                'finaliza_en' => null,
+                'cerrada_en' => null,
+                'resultado_publicado' => false,
+            ]);
+
+            if ($estado->votacion_activa_id === $votacion->id) {
+                $estado->votacion_activa_id = null;
+            }
+
+            $estado->vista_monitor = 'asistencia';
+            $estado->configuracion = [...($estado->configuracion ?? []), 'votacion_en_vivo' => false];
+            $estado->save();
+            $this->tocar($estado, 'votacion.reiniciada');
+        });
+    }
+
+    public function publicarResultado(Votacion $votacion): void
+    {
+        DB::transaction(function () use ($votacion) {
+            throw_unless($votacion->estado === 'cerrada', ValidationException::withMessages(['votacion' => 'La votación debe estar cerrada antes de publicar el resultado.']));
+            $estado = $this->estadoDe($votacion->sesionParlamentaria);
+            $votacion->update(['resultado_publicado' => true]);
+            $estado->update(['vista_monitor' => 'resultado']);
+            $this->tocar($estado, 'votacion.resultado_publicado');
+        });
+    }
+
+    public function despublicarResultado(Votacion $votacion): void
+    {
+        DB::transaction(function () use ($votacion) {
+            throw_unless($votacion->estado === 'cerrada', ValidationException::withMessages(['votacion' => 'Sólo puede despublicarse una votación cerrada.']));
+            $estado = $this->estadoDe($votacion->sesionParlamentaria);
+            $votacion->update(['resultado_publicado' => false]);
+            $estado->update(['vista_monitor' => 'asistencia']);
+            $this->tocar($estado, 'votacion.resultado_despublicado');
+        });
     }
 
     public function cerrarVencidas(): int
@@ -136,8 +233,12 @@ class GestorRecinto
         if ($votacion->estado !== 'abierta') {
             return;
         }
-        $votacion->update(['estado' => 'cerrada', 'cerrada_en' => now(), 'resultado_publicado' => true]);
-        $estado->update(['votacion_activa_id' => null, 'vista_monitor' => 'resultado']);
+        $votacion->update(['estado' => 'cerrada', 'cerrada_en' => now(), 'resultado_publicado' => false]);
+        $estado->update([
+            'votacion_activa_id' => null,
+            'vista_monitor' => 'asistencia',
+            'configuracion' => [...($estado->configuracion ?? []), 'votacion_en_vivo' => false],
+        ]);
         $this->tocar($estado, 'votacion.finalizada');
     }
 

@@ -8,6 +8,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-slate-100 text-slate-900 antialiased" data-pantalla-recinto="{{ request()->routeIs('comando.*', 'bancas.*', 'monitor.*') ? '1' : '0' }}" data-autenticado="{{ auth()->check() ? '1' : '0' }}" x-data="{ reautenticar: false }" @recinto-reauth.window="reautenticar = true">
+    @unless(request()->routeIs('comando.*', 'bancas.*', 'monitor.*'))
     <header class="border-b border-slate-800 bg-slate-950 text-white">
         <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
             <a href="{{ route('dashboard') }}" class="flex items-center gap-3">
@@ -41,8 +42,9 @@
             </div>
         </nav>
     @endauth
+    @endunless
 
-    <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+    <main class="{{ request()->routeIs('comando.*', 'bancas.*', 'monitor.*') ? '' : 'mx-auto max-w-7xl px-4 py-8 sm:px-6' }}">
         @if (session('estado'))<div class="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800">{{ session('estado') }}</div>@endif
         {{ $slot }}
     </main>

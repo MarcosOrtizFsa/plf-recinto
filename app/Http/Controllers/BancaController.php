@@ -21,7 +21,7 @@ class BancaController extends Controller
     {
         $this->autorizar($banca);
 
-        return view('bancas.show', ['banca' => $banca, 'legislador' => $banca->usuario]);
+        return view('bancas.tactil', ['banca' => $banca, 'legislador' => $banca->usuario]);
     }
 
     public function estado(Banca $banca, ConsultaEstadoRecinto $consulta): JsonResponse

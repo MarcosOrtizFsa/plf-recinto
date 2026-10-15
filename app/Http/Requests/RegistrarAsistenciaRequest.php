@@ -24,7 +24,7 @@ class RegistrarAsistenciaRequest extends FormRequest
     {
         return [
             'usuario_id' => ['required', 'integer', 'exists:usuarios,id'],
-            'estado' => ['required', 'in:presente,ausente,justificado'],
+            'estado' => ['required', 'in:presente,ausente,justificado,sin_marcar'],
         ];
     }
 }

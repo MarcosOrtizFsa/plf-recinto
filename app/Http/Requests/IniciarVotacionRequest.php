@@ -24,6 +24,7 @@ class IniciarVotacionRequest extends FormRequest
     {
         return [
             'duracion_segundos' => ['required', 'integer', 'min:10', 'max:3600'],
+            'metodo' => ['required', 'in:asistido,directo'],
         ];
     }
 }

@@ -1,6 +1,6 @@
 <div x-data="monitorSala()" x-init="cargar()" @recinto-resync.window="cargar()"
      class="fixed inset-0 z-40 flex min-h-screen flex-col overflow-hidden bg-[#071a2b] text-white">
-    <header class="border-b border-white/10 bg-[#17344d] px-5 py-4 shadow-2xl sm:px-8">
+    <header x-show="estado.activa" class="border-b border-white/10 bg-[#17344d] px-5 py-4 shadow-2xl sm:px-8">
         <div class="mx-auto flex max-w-[1800px] flex-wrap items-center justify-between gap-4">
             <div class="flex min-w-0 items-center gap-4">
                 <div class="grid size-14 shrink-0 place-items-center rounded-full border-4 border-sky-300 bg-white text-sm font-black text-[#17344d] shadow-lg">PLF</div>
@@ -19,7 +19,10 @@
 
     <main class="relative flex min-h-0 flex-1 flex-col">
         <section x-show="!estado.activa" class="grid flex-1 place-items-center p-8 text-center">
-            <div><div class="mx-auto mb-6 size-5 animate-pulse rounded-full bg-sky-400"></div><p class="text-3xl font-black text-slate-300">Esperando el inicio de la sesión</p></div>
+            <div>
+                <div class="mx-auto grid size-32 place-items-center rounded-full border-4 border-sky-300 bg-white text-4xl font-black text-[#17344d] shadow-2xl shadow-sky-950/40">PLF</div>
+                <p class="mt-7 text-3xl font-black tracking-[.35em] text-white">RECINTO</p>
+            </div>
         </section>
 
         <section x-show="estado.activa && ['asistencia','documento'].includes(estado.vista)" class="flex min-h-0 flex-1 flex-col px-3 pb-4 pt-3 sm:px-7">
@@ -67,8 +70,11 @@
             </footer>
         </section>
 
-        <section x-show="estado.vista === 'votacion'" class="grid flex-1 place-items-center p-8 text-center"><div><p class="text-xl uppercase tracking-widest text-sky-400">Votación en curso</p><h2 class="mt-5 text-5xl font-black" x-text="estado.votacion?.tema"></h2><p class="mt-8 text-2xl text-slate-300">Esperando los votos de las bancas habilitadas</p></div></section>
-        <section x-show="estado.vista === 'resultado' && estado.resultado" class="grid flex-1 place-items-center p-8 text-center"><div class="w-full max-w-5xl"><p class="text-xl uppercase tracking-widest text-sky-400">Resultado final</p><h2 class="mt-4 text-4xl font-black" x-text="estado.resultado?.tema"></h2><div class="mt-10 grid gap-5 md:grid-cols-3"><div class="rounded-2xl bg-emerald-600 p-8"><strong class="text-6xl" x-text="estado.resultado?.afirmativos"></strong><span class="mt-2 block text-xl font-bold">AFIRMATIVOS</span></div><div class="rounded-2xl bg-red-600 p-8"><strong class="text-6xl" x-text="estado.resultado?.negativos"></strong><span class="mt-2 block text-xl font-bold">NEGATIVOS</span></div><div class="rounded-2xl bg-amber-500 p-8 text-slate-950"><strong class="text-6xl" x-text="estado.resultado?.abstenciones"></strong><span class="mt-2 block text-xl font-bold">ABSTENCIONES</span></div></div></div></section>
+        @include('monitor.votacion')
+        <section x-show="estado.vista === 'resultado' && estado.resultado" class="flex min-h-0 flex-1 flex-col bg-slate-100 px-5 py-4 text-slate-900">
+            <header class="flex shrink-0 items-start justify-between gap-6"><div class="min-w-0"><p class="text-xs font-black uppercase tracking-[.25em] text-sky-700">Resultado final · En general</p><h2 class="mt-1 truncate text-3xl font-black" x-text="estado.resultado?.tema"></h2></div><div class="shrink-0 text-right text-2xl font-black"><p class="text-emerald-600">AFIRMATIVO: <span x-text="estado.resultado?.afirmativos"></span></p><p class="text-red-600">NEGATIVO: <span x-text="estado.resultado?.negativos"></span></p><p class="text-amber-600">ABSTENCIÓN: <span x-text="estado.resultado?.abstenciones"></span></p></div></header>
+            <div class="mt-4 grid min-h-0 flex-1 grid-cols-10 grid-rows-3 gap-3"><template x-for="legislador in estado.resultado?.bancas ?? []" :key="legislador.id"><div class="relative grid min-h-0 place-items-center rounded-xl border-2 shadow-sm" :class="claseVotoPublico(legislador)"><span x-show="legislador.asistencia !== 'presente'" class="text-5xl font-light">×</span><span x-show="legislador.asistencia === 'presente' && legislador.voto" class="text-sm font-black uppercase" x-text="etiquetaVoto(legislador.voto)"></span><span class="absolute bottom-1 left-2 text-[10px] font-black opacity-70" x-text="legislador.banca"></span><span class="absolute bottom-1 right-2 max-w-[70%] truncate text-[9px] font-bold opacity-70" x-text="apellido(legislador.nombre)"></span></div></template></div>
+        </section>
     </main>
 </div>
 
@@ -81,6 +87,11 @@
             colorBanca(estado) {
                 return { presente: 'border-emerald-200 bg-emerald-500 text-white shadow-emerald-500/30', ausente: 'border-red-200 bg-red-500 text-white shadow-red-500/30', justificado: 'border-amber-200 bg-amber-400 text-slate-950 shadow-amber-400/30', sin_marcar: 'border-slate-300 bg-slate-500 text-white shadow-slate-950/30' }[estado] ?? 'border-slate-300 bg-slate-500 text-white'
             },
+            claseVotoPublico(legislador) {
+                if (legislador.asistencia !== 'presente') return 'border-slate-300 bg-white text-slate-700'
+                return { afirmativo: 'border-emerald-700 bg-emerald-600 text-white', negativo: 'border-red-700 bg-red-600 text-white', abstencion: 'border-amber-500 bg-amber-400 text-slate-950' }[legislador.voto] ?? 'border-slate-300 bg-white text-slate-800'
+            },
+            etiquetaVoto(voto) { return { afirmativo: 'Sí', negativo: 'No', abstencion: 'Abs.' }[voto] ?? '' },
             bancasEnGrilla() {
                 const legisladores = this.estado.asistencia?.legisladores ?? []
                 return Array.from({ length: 30 }, (_, indice) => legisladores[indice] ?? { id: `vacio-${indice}`, banca: indice + 1, nombre: 'Sin asignar', asistencia: 'sin_marcar' })

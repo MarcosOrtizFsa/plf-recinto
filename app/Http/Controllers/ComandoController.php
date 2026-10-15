@@ -49,19 +49,43 @@ class ComandoController extends Controller
         return back()->with('estado', 'Sesión parlamentaria iniciada.');
     }
 
-    public function cerrarSesion(SesionParlamentaria $sesion, GestorRecinto $gestor): RedirectResponse
+    public function suspenderSesion(SesionParlamentaria $sesion, GestorRecinto $gestor): RedirectResponse
     {
         $this->autorizar();
-        $gestor->cerrarSesion($sesion);
+        $gestor->suspenderSesion($sesion);
 
-        return back()->with('estado', 'Sesión parlamentaria finalizada.');
+        return back()->with('estado', 'Ecosistema del recinto suspendido. La sesión parlamentaria continúa en curso.');
     }
 
-    public function asistencia(RegistrarAsistenciaRequest $request, SesionParlamentaria $sesion, GestorRecinto $gestor): RedirectResponse
+    public function reanudarSesion(SesionParlamentaria $sesion, GestorRecinto $gestor): RedirectResponse
+    {
+        $this->autorizar();
+        $gestor->reanudarSesion($sesion);
+
+        return back()->with('estado', 'Ecosistema del recinto reanudado.');
+    }
+
+    public function asistencia(RegistrarAsistenciaRequest $request, SesionParlamentaria $sesion, GestorRecinto $gestor): RedirectResponse|JsonResponse
     {
         $gestor->registrarAsistencia($sesion, User::query()->findOrFail($request->integer('usuario_id')), $request->string('estado')->toString(), $request->user());
 
+        if ($request->expectsJson()) {
+            return response()->json(['estado' => 'Asistencia actualizada.']);
+        }
+
         return back()->with('estado', 'Asistencia actualizada.');
+    }
+
+    public function reiniciarAsistencia(Request $request, SesionParlamentaria $sesion, GestorRecinto $gestor): RedirectResponse|JsonResponse
+    {
+        $this->autorizar();
+        $gestor->reiniciarAsistencia($sesion);
+
+        if ($request->expectsJson()) {
+            return response()->json(['estado' => 'Asistencia reiniciada.']);
+        }
+
+        return back()->with('estado', 'Asistencia reiniciada.');
     }
 
     public function banca(Request $request, SesionParlamentaria $sesion, Banca $banca, GestorRecinto $gestor): RedirectResponse
@@ -73,10 +97,14 @@ class ComandoController extends Controller
         return back()->with('estado', 'Estado de banca actualizado.');
     }
 
-    public function documento(SesionParlamentaria $sesion, Documento $documento, GestorRecinto $gestor): RedirectResponse
+    public function documento(Request $request, SesionParlamentaria $sesion, Documento $documento, GestorRecinto $gestor): RedirectResponse|JsonResponse
     {
         $this->autorizar();
         $gestor->mostrarDocumento($sesion, $documento);
+
+        if ($request->expectsJson()) {
+            return response()->json(['estado' => 'Documento publicado en las bancas.']);
+        }
 
         return back()->with('estado', 'Documento publicado en las bancas.');
     }
@@ -88,26 +116,83 @@ class ComandoController extends Controller
         return back()->with('estado', 'Votación configurada.');
     }
 
-    public function iniciarVotacion(IniciarVotacionRequest $request, Votacion $votacion, GestorRecinto $gestor): RedirectResponse
+    public function iniciarVotacion(IniciarVotacionRequest $request, Votacion $votacion, GestorRecinto $gestor): RedirectResponse|JsonResponse
     {
-        $gestor->iniciarVotacion($votacion, $request->integer('duracion_segundos'));
+        $gestor->iniciarVotacion($votacion, $request->integer('duracion_segundos'), $request->string('metodo')->toString());
+
+        if ($request->expectsJson()) {
+            return response()->json(['estado' => 'Votación iniciada.']);
+        }
 
         return back()->with('estado', 'Votación iniciada.');
     }
 
-    public function cerrarVotacion(Votacion $votacion, GestorRecinto $gestor): RedirectResponse
+    public function cerrarVotacion(Request $request, Votacion $votacion, GestorRecinto $gestor): RedirectResponse|JsonResponse
     {
         $this->autorizar();
         $gestor->cerrarVotacion($votacion);
 
-        return back()->with('estado', 'Votación cerrada y resultado publicado.');
+        if ($request->expectsJson()) {
+            return response()->json(['estado' => 'Votación cerrada.']);
+        }
+
+        return back()->with('estado', 'Votación cerrada. El resultado aún no fue publicado.');
     }
 
-    public function votoAsistido(RegistrarVotoRequest $request, Votacion $votacion, GestorRecinto $gestor): RedirectResponse
+    public function reiniciarVotacion(Request $request, Votacion $votacion, GestorRecinto $gestor): RedirectResponse|JsonResponse
+    {
+        $this->autorizar();
+        $gestor->reiniciarVotacion($votacion);
+
+        if ($request->expectsJson()) {
+            return response()->json(['estado' => 'Votación reiniciada y lista para volver a iniciarse.']);
+        }
+
+        return back()->with('estado', 'Votación reiniciada. Se eliminaron todos los votos anteriores.');
+    }
+
+    public function publicarResultado(Request $request, Votacion $votacion, GestorRecinto $gestor): RedirectResponse|JsonResponse
+    {
+        $this->autorizar();
+        $gestor->publicarResultado($votacion);
+
+        if ($request->expectsJson()) {
+            return response()->json(['estado' => 'Resultado publicado.']);
+        }
+
+        return back()->with('estado', 'Resultado publicado en el monitor.');
+    }
+
+    public function visibilidadVotacion(Request $request, Votacion $votacion, GestorRecinto $gestor): JsonResponse
+    {
+        $this->autorizar();
+        $datos = $request->validate(['visible' => ['required', 'boolean']]);
+        $gestor->mostrarVotacionEnVivo($votacion, (bool) $datos['visible']);
+
+        return response()->json(['estado' => $datos['visible'] ? 'Votación visible en el monitor.' : 'Votación oculta en el monitor.']);
+    }
+
+    public function despublicarResultado(Request $request, Votacion $votacion, GestorRecinto $gestor): RedirectResponse|JsonResponse
+    {
+        $this->autorizar();
+        $gestor->despublicarResultado($votacion);
+
+        if ($request->expectsJson()) {
+            return response()->json(['estado' => 'Resultado retirado del monitor.']);
+        }
+
+        return back()->with('estado', 'Resultado retirado. El monitor volvió a Asistencia.');
+    }
+
+    public function votoAsistido(RegistrarVotoRequest $request, Votacion $votacion, GestorRecinto $gestor): RedirectResponse|JsonResponse
     {
         $this->autorizar();
         abort_unless($votacion->metodo === 'asistido', 422);
         $gestor->votar($votacion, User::query()->findOrFail($request->integer('usuario_id')), $request->string('opcion')->toString(), $request->user());
+
+        if ($request->expectsJson()) {
+            return response()->json(['estado' => 'Voto registrado.']);
+        }
 
         return back()->with('estado', 'Voto registrado. Puede corregirse mientras la votación continúe abierta.');
     }
