@@ -1,4 +1,6 @@
 <x-layouts.app title="Monitor público — Sistema del Recinto">
+    @include('monitor.sala')
+    {{-- Diseño anterior conservado temporalmente como referencia.
     <div x-data="monitorRecinto()" x-init="cargar()" @recinto-resync.window="cargar()" class="min-h-[75vh] rounded-3xl bg-slate-950 p-8 text-white shadow-2xl">
         <div class="text-center"><p class="text-sm font-bold uppercase tracking-[.35em] text-sky-400">Cámara de Diputados</p><h1 class="mt-4 text-4xl font-black" x-text="estado.sesion?.nombre ?? 'Sistema del Recinto'"></h1></div>
         <section x-show="!estado.activa" class="grid min-h-[50vh] place-items-center"><p class="text-3xl font-bold text-slate-400">Esperando el inicio de la sesión</p></section>
@@ -7,4 +9,5 @@
         <section x-show="estado.vista === 'resultado' && estado.resultado" class="mt-12 text-center"><p class="text-xl uppercase tracking-widest text-sky-400">Resultado final</p><h2 class="mt-4 text-4xl font-black" x-text="estado.resultado?.tema"></h2><div class="mx-auto mt-10 grid max-w-5xl gap-5 md:grid-cols-3"><div class="rounded-2xl bg-emerald-600 p-8"><strong class="text-6xl" x-text="estado.resultado?.afirmativos"></strong><span class="mt-2 block text-xl font-bold">AFIRMATIVOS</span></div><div class="rounded-2xl bg-red-600 p-8"><strong class="text-6xl" x-text="estado.resultado?.negativos"></strong><span class="mt-2 block text-xl font-bold">NEGATIVOS</span></div><div class="rounded-2xl bg-amber-500 p-8 text-slate-950"><strong class="text-6xl" x-text="estado.resultado?.abstenciones"></strong><span class="mt-2 block text-xl font-bold">ABSTENCIONES</span></div></div></section>
     </div>
     <script>function monitorRecinto(){return {estado:{activa:false,vista:'espera'},async cargar(){const r=await axios.get('{{ route('monitor.estado') }}');this.estado=r.data}}}</script>
+    --}}
 </x-layouts.app>

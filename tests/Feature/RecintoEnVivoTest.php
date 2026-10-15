@@ -72,6 +72,31 @@ class RecintoEnVivoTest extends TestCase
             ->assertJsonPath('habilitada', true)->assertJsonPath('asistencia', 'presente')->assertJsonPath('documento.titulo', $documento->titulo);
     }
 
+    public function test_monitor_publico_distingue_bancas_sin_marcar_presentes_y_ausentes(): void
+    {
+        $primero = $this->legislador(1);
+        $segundo = $this->legislador(2);
+        $gestor = app(GestorRecinto::class);
+        $gestor->activarSesion($this->sesion);
+
+        $this->getJson(route('monitor.estado'))->assertOk()
+            ->assertJsonPath('asistencia.total', 2)
+            ->assertJsonPath('asistencia.sin_marcar', 2)
+            ->assertJsonPath('asistencia.ausentes', 0);
+
+        $gestor->registrarAsistencia($this->sesion, $primero, 'presente', $this->secretaria);
+        $gestor->registrarAsistencia($this->sesion, $segundo, 'ausente', $this->secretaria);
+
+        $this->getJson(route('monitor.estado'))->assertOk()
+            ->assertJsonPath('asistencia.cantidad', 1)
+            ->assertJsonPath('asistencia.ausentes', 1)
+            ->assertJsonPath('asistencia.sin_marcar', 0)
+            ->assertJsonPath('asistencia.porcentaje', 50)
+            ->assertJsonPath('asistencia.quorum', false)
+            ->assertJsonPath('asistencia.legisladores.0.asistencia', 'presente')
+            ->assertJsonPath('asistencia.legisladores.1.asistencia', 'ausente');
+    }
+
     public function test_voto_directo_puede_corregirse_y_cierra_cuando_votan_todos_los_presentes(): void
     {
         $primero = $this->legislador(1);
